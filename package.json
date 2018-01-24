@@ -6,7 +6,9 @@
     "build": "./node_modules/.bin/webpack",
     "watch": "./node_modules/.bin/webpack -w"
   },
-  "author": "Plastiquewind",
+  "author": {
+    "name": "Plastiquewind"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
