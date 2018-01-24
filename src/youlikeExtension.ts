@@ -38,7 +38,7 @@ class YouLikeExtension {
                 }
 
                 YouLikeExtension.disableListener();
-                chrome.storage.local.set({ videosList: dataToSave, storagesAreSynchronizedKey: true },
+                chrome.storage.local.set({ videosList: dataToSave, storagesAreSynchronized: true },
                     () => YouLikeExtension.enableListener());
             } else {
                 dataToSave = items.videosList;
