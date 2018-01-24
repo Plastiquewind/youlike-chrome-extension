@@ -18,10 +18,11 @@ class Background {
 
         chrome.storage.onChanged.addListener((changes: { videosList: chrome.storage.StorageChange;},
             areaName: string) => {
-            let count: number = changes.videosList ?
-                changes.videosList.newValue ? changes.videosList.newValue.length : 0 : 0;
+            if (changes.videosList) {
+                let count: number = changes.videosList.newValue ? changes.videosList.newValue.length : 0;
 
-            Background.setBadgeText(count);
+                Background.setBadgeText(count);
+            }
         });
     }
 
