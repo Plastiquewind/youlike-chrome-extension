@@ -16,7 +16,8 @@ class YouTubeExtension {
     public static init(): void {
         YouTubeExtension.loadVideosList((videosList: string[]) => {
             let videoIsInList: boolean = YouTubeExtension.currentVideoIsInList(videosList);
-            let youLikeBtn: JQuery<HTMLElement> = $(`<paper-button class="button-youlike"></paper-button>`);
+            let youLikeBtnContainer: JQuery<HTMLElement> = $(`<div id="youlikeButtonContainer"></div>`);
+            let youLikeBtn: JQuery<HTMLElement> = this.youLikeBtn = $(`<paper-button id="youlikeButton"></paper-button>`);
 
             youLikeBtn.text(videoIsInList ? YouTubeExtension.removeVideoBtnText :
                 YouTubeExtension.addVideoBtnText);
@@ -45,14 +46,28 @@ class YouTubeExtension {
                 });
             });
 
-            let timer: number = setInterval(() => {
-                if ($("#notification-button").length > 0) {
-                    $(".button-youlike").remove();
-                    YouTubeExtension.youLikeBtn = youLikeBtn.insertAfter("#notification-button");
+            youLikeBtnContainer.append(youLikeBtn);
 
-                    clearInterval(timer);
+            setInterval(() => {
+                if (document.getElementById("count") && document.getElementById("youlikeButtonContainer") === null) {
+                    let targetElement: NodeListOf<Element> = document.querySelectorAll("[id='subscribe-button']");
+
+                    for(let i: number = 0; i < targetElement.length; i++) {
+                        if(targetElement[i].className.indexOf("ytd-video-secondary-info-renderer") > -1) {
+                            $(targetElement[i]).prepend(youLikeBtnContainer);
+                            break;
+                        }
+                    }
+
+                    /* Fix hidden description bug */
+                    let descriptionBox: NodeListOf<Element> = document.querySelectorAll("ytd-video-secondary-info-renderer");
+
+                    if (descriptionBox[0].className.indexOf("loading") > -1) {
+                        descriptionBox[0].classList.remove("loading");
+                    }
                 }
-            }, 1000);
+            }, 100);
+
         });
         YouTubeExtension.enableListener();
     }
