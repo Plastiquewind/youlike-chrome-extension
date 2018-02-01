@@ -2,11 +2,16 @@
     width: 100%;
 }
 
-#youlikeButton {
-    color: white !important;
-    background-color: red !important;
+.youlikeButton {
     width: 100%;
     text-align: center;
     margin-bottom: 5px;
     font-size: 10pt;
+    background-color: rgb(238, 238, 238);
+    color: rgba(17, 17, 17, 0.6);
+}
+
+.youlikeButton_accent {
+    background-color: red !important;
+    color: white !important;
 }

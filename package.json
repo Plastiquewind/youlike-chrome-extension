@@ -1,6 +1,6 @@
 {
   "name": "youlike-chrome-extension",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "YouLike - Восстановление лайков - расширение для браузера Google Chrome.",
   "scripts": {
     "build": "./node_modules/.bin/webpack",

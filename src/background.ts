@@ -33,14 +33,7 @@ class Background {
     private static injectScripts(tab: chrome.tabs.Tab): void {
         let url: string = tab.url.toLowerCase();
 
-        if (url.match(/^(?:https:\/\/)?(?:www\.)?youtube\.com\/watch\?.+/)) {
-            chrome.tabs.executeScript({
-                file: "js/vendor.js"
-            });
-            chrome.tabs.executeScript({
-                file: "js/youtubeExtension.js"
-            });
-        } else if (url.match(/^(?:https:\/\/)?youlikeapp.github.io\/?/)) {
+        if (url.match(/^(?:https:\/\/)?youlikeapp.github.io\/?/)) {
             chrome.tabs.executeScript({
                 file: "js/vendor.js"
             });

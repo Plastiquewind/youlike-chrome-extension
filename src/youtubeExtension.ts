@@ -10,46 +10,62 @@ $(() => YouTubeExtension.init());
 class YouTubeExtension {
     private static readonly addVideoBtnText: string = "Добавить в YouLike";
     private static readonly removeVideoBtnText: string = "Удалить из YouLike";
-    private static readonly currentVideoId: string = qs.parse(document.location.search).v;
+    private static readonly youlikeBtnAccentClassName: string = "youlikeButton_accent";
+    private static currentVideoId: string;
     private static youLikeBtn: JQuery<HTMLElement>;
 
     public static init(): void {
-        YouTubeExtension.loadVideosList((videosList: string[]) => {
-            let videoIsInList: boolean = YouTubeExtension.currentVideoIsInList(videosList);
-            let youLikeBtnContainer: JQuery<HTMLElement> = $(`<div id="youlikeButtonContainer"></div>`);
-            let youLikeBtn: JQuery<HTMLElement> = this.youLikeBtn = $(`<paper-button id="youlikeButton"></paper-button>`);
+        const youlikeButtonContainerId: string = "youlikeButtonContainer";
 
-            youLikeBtn.text(videoIsInList ? YouTubeExtension.removeVideoBtnText :
-                YouTubeExtension.addVideoBtnText);
-            youLikeBtn.click(() => {
+        setTimeout(function tick(): void {
+            if (window.location.href.indexOf("/watch") < 0) {
+                setTimeout(tick, 100);
+
+                return;
+            }
+
+            if (document.getElementById("count") && document.getElementById(youlikeButtonContainerId) === null) {
                 YouTubeExtension.loadVideosList((videosList: string[]) => {
-                    let videoIndex: number = YouTubeExtension.findCurrentVideoIndex(videosList);
-                    let videoIsInList: boolean = videoIndex !== -1;
+                    YouTubeExtension.currentVideoId = qs.parse(document.location.search).v;
 
-                    if (videoIsInList) {
-                        videosList.splice(videoIndex, 1);
-                        YouTubeExtension.updateVideosList(videosList, () => {
-                            videoIsInList = false;
-                            youLikeBtn.text(YouTubeExtension.addVideoBtnText);
+                    let videoIsInList: boolean = YouTubeExtension.currentVideoIsInList(videosList);
+                    let youLikeBtnContainer: JQuery<HTMLElement> = $(`<div id="${youlikeButtonContainerId}"></div>`);
+                    // tslint:disable-next-line:max-line-length
+                    let youLikeBtnCurrentClassName: string = `youlikeButton ${!videoIsInList ? YouTubeExtension.youlikeBtnAccentClassName : ""}`;
+
+                    YouTubeExtension.youLikeBtn = $(`<paper-button class="${youLikeBtnCurrentClassName}"></paper-button>`);
+
+                    YouTubeExtension.youLikeBtn.text(videoIsInList ? YouTubeExtension.removeVideoBtnText :
+                        YouTubeExtension.addVideoBtnText);
+                    YouTubeExtension.youLikeBtn.click(() => {
+                        YouTubeExtension.loadVideosList((videosList: string[]) => {
+                            let videoIndex: number = YouTubeExtension.findCurrentVideoIndex(videosList);
+                            let videoIsInList: boolean = videoIndex !== -1;
+
+                            if (videoIsInList) {
+                                videosList.splice(videoIndex, 1);
+                                YouTubeExtension.updateVideosList(videosList, () => {
+                                    videoIsInList = false;
+
+                                    YouTubeExtension.toggleButton(videoIsInList);
+                                });
+                            } else {
+                                if (!videosList) {
+                                    videosList = [];
+                                }
+
+                                videosList.push(YouTubeExtension.currentVideoId);
+                                YouTubeExtension.updateVideosList(videosList, () => {
+                                    videoIsInList = true;
+
+                                    YouTubeExtension.toggleButton(videoIsInList);
+                                });
+                            }
                         });
-                    } else {
-                        if (!videosList) {
-                            videosList = [];
-                        }
+                    });
 
-                        videosList.push(YouTubeExtension.currentVideoId);
-                        YouTubeExtension.updateVideosList(videosList, () => {
-                            videoIsInList = true;
-                            youLikeBtn.text(YouTubeExtension.removeVideoBtnText);
-                        });
-                    }
-                });
-            });
+                    youLikeBtnContainer.append(YouTubeExtension.youLikeBtn);
 
-            youLikeBtnContainer.append(youLikeBtn);
-
-            setInterval(() => {
-                if (document.getElementById("count") && document.getElementById("youlikeButtonContainer") === null) {
                     let targetElement: NodeListOf<Element> = document.querySelectorAll("[id='subscribe-button']");
 
                     for(let i: number = 0; i < targetElement.length; i++) {
@@ -65,18 +81,28 @@ class YouTubeExtension {
                     if (descriptionBox[0].className.indexOf("loading") > -1) {
                         descriptionBox[0].classList.remove("loading");
                     }
-                }
-            }, 100);
 
-        });
-        YouTubeExtension.enableListener();
+                    YouTubeExtension.enableListener();
+
+                    setTimeout(tick, 100);
+                });
+            } else {
+                setTimeout(tick, 100);
+            }
+        }, 100);
     }
 
     private static onChanged: (changes: { videosList: chrome.storage.StorageChange }) => void = (changes) => {
-        if (YouTubeExtension.currentVideoIsInList(changes.videosList.newValue)) {
+        YouTubeExtension.toggleButton(YouTubeExtension.currentVideoIsInList(changes.videosList.newValue));
+    }
+
+    private static toggleButton(videoIsInList: boolean): void {
+        if (videoIsInList) {
             YouTubeExtension.youLikeBtn.text(YouTubeExtension.removeVideoBtnText);
+            YouTubeExtension.youLikeBtn.removeClass(YouTubeExtension.youlikeBtnAccentClassName);
         } else {
             YouTubeExtension.youLikeBtn.text(YouTubeExtension.addVideoBtnText);
+            YouTubeExtension.youLikeBtn.addClass(YouTubeExtension.youlikeBtnAccentClassName);
         }
     }
 
