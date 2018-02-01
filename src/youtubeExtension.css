@@ -1,8 +1,16 @@
-#youlikeButtonContainer {
+.youlikeButtonContainer_modern {
     width: 100%;
 }
 
-.youlikeButton {
+.youlikeButtonContainer_classic {
+    height: 23px;
+    margin-left: 28px;
+    padding-bottom: 1px;
+    line-height: 25px;
+    font-size: 12px;
+}
+
+.youlikeButton_modern {
     width: 100%;
     text-align: center;
     margin-bottom: 5px;

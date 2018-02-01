@@ -5,17 +5,113 @@ import * as validator from "validator";
 
 import "./youtubeExtension.css";
 
-$(() => YouTubeExtension.init());
+$(() => {
+    if (document.getElementById("polymer-app") || document.getElementById("masthead") || (<any>window).Polymer) {
+        YouTubeModernExtension.getInstance().run();
+    } else {
+        YouTubeClassicExtension.getInstance().run();
+    }
+});
 
-class YouTubeExtension {
-    private static readonly addVideoBtnText: string = "Добавить в YouLike";
-    private static readonly removeVideoBtnText: string = "Удалить из YouLike";
-    private static readonly youlikeBtnAccentClassName: string = "youlikeButton_accent";
-    private static currentVideoId: string;
-    private static youLikeBtn: JQuery<HTMLElement>;
+abstract class YouTubeExtensionBase {
+    protected readonly addVideoBtnText: string = "Добавить в YouLike";
+    protected readonly removeVideoBtnText: string = "Удалить из YouLike";
+    protected readonly youlikeButtonContainerId: string = "youlikeButtonContainer";
+    protected currentVideoId: string;
+    protected youLikeBtn: JQuery<HTMLElement>;
 
-    public static init(): void {
-        const youlikeButtonContainerId: string = "youlikeButtonContainer";
+    protected abstract get youlikeBtnAccentClassName(): string;
+
+    protected onChanged: (changes: { videosList: chrome.storage.StorageChange }) => void = (changes) => {
+        this.toggleButton(this.currentVideoIsInList(changes.videosList.newValue));
+    }
+
+    protected onClicked: () => void = () => {
+        this.loadVideosList((videosList: string[]) => {
+            let videoIndex: number = this.findCurrentVideoIndex(videosList);
+            let videoIsInList: boolean = videoIndex !== -1;
+
+            if (videoIsInList) {
+                videosList.splice(videoIndex, 1);
+                this.updateVideosList(videosList, () => {
+                    videoIsInList = false;
+
+                    this.toggleButton(videoIsInList);
+                });
+            } else {
+                if (!videosList) {
+                    videosList = [];
+                }
+
+                videosList.push(this.currentVideoId);
+                this.updateVideosList(videosList, () => {
+                    videoIsInList = true;
+
+                    this.toggleButton(videoIsInList);
+                });
+            }
+        });
+    }
+
+    protected toggleButton(videoIsInList: boolean): void {
+        if (videoIsInList) {
+            this.youLikeBtn.text(this.removeVideoBtnText);
+            this.youLikeBtn.removeClass(this.youlikeBtnAccentClassName);
+        } else {
+            this.youLikeBtn.text(this.addVideoBtnText);
+            this.youLikeBtn.addClass(this.youlikeBtnAccentClassName);
+        }
+    }
+
+    protected updateVideosList(newVideosList: string[], callback?: () => void): void {
+        this.disableListener();
+        chrome.storage.local.set({ videosList: newVideosList }, () => {
+            this.enableListener();
+
+            if (callback) {
+                callback();
+            }
+        });
+    }
+
+    protected enableListener(): void {
+        chrome.storage.onChanged.addListener(this.onChanged);
+    }
+
+    protected disableListener(): void {
+        chrome.storage.onChanged.removeListener(this.onChanged);
+    }
+
+    protected findCurrentVideoIndex(source: string[]): number {
+        return _.findIndex(source,
+            (video: string) => (validator.isURL(video) ? qs.parse(qs.extract(video)).v : video) === this.currentVideoId);
+    }
+
+    protected currentVideoIsInList(source: string[]): boolean {
+        return this.findCurrentVideoIndex(source) !== -1;
+    }
+
+    protected loadVideosList(callback: (videosList: string[]) => void): void {
+        chrome.storage.local.get("videosList", (items) => callback(items.videosList));
+    }
+
+    public abstract run(): void;
+}
+
+class YouTubeModernExtension extends YouTubeExtensionBase {
+    protected youlikeBtnAccentClassName: string = "youlikeButton_accent";
+    private static instance: YouTubeModernExtension = new YouTubeModernExtension();
+
+    private constructor() {
+        super();
+    }
+
+    public static getInstance(): YouTubeModernExtension {
+        return YouTubeModernExtension.instance;
+    }
+
+    public run(): void {
+        const self: YouTubeModernExtension = this;
 
         setTimeout(function tick(): void {
             if (window.location.href.indexOf("/watch") < 0) {
@@ -24,47 +120,23 @@ class YouTubeExtension {
                 return;
             }
 
-            if (document.getElementById("count") && document.getElementById(youlikeButtonContainerId) === null) {
-                YouTubeExtension.loadVideosList((videosList: string[]) => {
-                    YouTubeExtension.currentVideoId = qs.parse(document.location.search).v;
+            if (document.getElementById("count") && document.getElementById(self.youlikeButtonContainerId) === null) {
+                self.loadVideosList((videosList: string[]) => {
+                    self.currentVideoId = qs.parse(document.location.search).v;
 
-                    let videoIsInList: boolean = YouTubeExtension.currentVideoIsInList(videosList);
-                    let youLikeBtnContainer: JQuery<HTMLElement> = $(`<div id="${youlikeButtonContainerId}"></div>`);
+                    let videoIsInList: boolean = self.currentVideoIsInList(videosList);
                     // tslint:disable-next-line:max-line-length
-                    let youLikeBtnCurrentClassName: string = `youlikeButton ${!videoIsInList ? YouTubeExtension.youlikeBtnAccentClassName : ""}`;
+                    let youLikeBtnContainer: JQuery<HTMLElement> = $(`<div id="${self.youlikeButtonContainerId}" class="youlikeButtonContainer_modern"></div>`);
+                    // tslint:disable-next-line:max-line-length
+                    let youLikeBtnCurrentClassName: string = `youlikeButton_modern ${!videoIsInList ? self.youlikeBtnAccentClassName : ""}`;
 
-                    YouTubeExtension.youLikeBtn = $(`<paper-button class="${youLikeBtnCurrentClassName}"></paper-button>`);
+                    self.youLikeBtn = $(`<paper-button class="${youLikeBtnCurrentClassName}"></paper-button>`);
 
-                    YouTubeExtension.youLikeBtn.text(videoIsInList ? YouTubeExtension.removeVideoBtnText :
-                        YouTubeExtension.addVideoBtnText);
-                    YouTubeExtension.youLikeBtn.click(() => {
-                        YouTubeExtension.loadVideosList((videosList: string[]) => {
-                            let videoIndex: number = YouTubeExtension.findCurrentVideoIndex(videosList);
-                            let videoIsInList: boolean = videoIndex !== -1;
+                    self.youLikeBtn.text(videoIsInList ? self.removeVideoBtnText :
+                        self.addVideoBtnText);
+                    self.youLikeBtn.click(self.onClicked);
 
-                            if (videoIsInList) {
-                                videosList.splice(videoIndex, 1);
-                                YouTubeExtension.updateVideosList(videosList, () => {
-                                    videoIsInList = false;
-
-                                    YouTubeExtension.toggleButton(videoIsInList);
-                                });
-                            } else {
-                                if (!videosList) {
-                                    videosList = [];
-                                }
-
-                                videosList.push(YouTubeExtension.currentVideoId);
-                                YouTubeExtension.updateVideosList(videosList, () => {
-                                    videoIsInList = true;
-
-                                    YouTubeExtension.toggleButton(videoIsInList);
-                                });
-                            }
-                        });
-                    });
-
-                    youLikeBtnContainer.append(YouTubeExtension.youLikeBtn);
+                    youLikeBtnContainer.append(self.youLikeBtn);
 
                     let targetElement: NodeListOf<Element> = document.querySelectorAll("[id='subscribe-button']");
 
@@ -82,7 +154,7 @@ class YouTubeExtension {
                         descriptionBox[0].classList.remove("loading");
                     }
 
-                    YouTubeExtension.enableListener();
+                    self.enableListener();
 
                     setTimeout(tick, 100);
                 });
@@ -91,50 +163,101 @@ class YouTubeExtension {
             }
         }, 100);
     }
+}
 
-    private static onChanged: (changes: { videosList: chrome.storage.StorageChange }) => void = (changes) => {
-        YouTubeExtension.toggleButton(YouTubeExtension.currentVideoIsInList(changes.videosList.newValue));
+class YouTubeClassicExtension extends YouTubeExtensionBase {
+    protected youlikeBtnAccentClassName: string = "youlikeButton_accent";
+
+    private static instance: YouTubeClassicExtension = new YouTubeClassicExtension();
+
+    private constructor() {
+        super();
     }
 
-    private static toggleButton(videoIsInList: boolean): void {
-        if (videoIsInList) {
-            YouTubeExtension.youLikeBtn.text(YouTubeExtension.removeVideoBtnText);
-            YouTubeExtension.youLikeBtn.removeClass(YouTubeExtension.youlikeBtnAccentClassName);
-        } else {
-            YouTubeExtension.youLikeBtn.text(YouTubeExtension.addVideoBtnText);
-            YouTubeExtension.youLikeBtn.addClass(YouTubeExtension.youlikeBtnAccentClassName);
+    public static getInstance(): YouTubeClassicExtension {
+        return YouTubeClassicExtension.instance;
+    }
+
+    public run(): void {
+        const pageContainer: HTMLElement = document.getElementById("page-container");
+
+        if (!pageContainer) {
+            return;
+        }
+
+        if (window.location.href.indexOf("/watch") > -1) {
+            this.renderButton();
+        }
+
+        let isAjax: boolean = /class[\w\s"'-=]+spf\-link/.test(pageContainer.innerHTML);
+        let logoContainer: HTMLElement = document.getElementById("logo-container");
+
+        // fix for blocked videos
+        if (logoContainer && !isAjax) {
+            isAjax = (" "+ logoContainer.className + " ").indexOf(" spf-link ")>=0;
+        }
+
+        let content: HTMLElement = document.getElementById("content");
+
+        // ajax UI
+        if (isAjax && content) {
+            let mo: any = (<any>window).MutationObserver || (<any>window).WebKitMutationObserver;
+
+            if (mo !== undefined) {
+                let observer: MutationObserver = new mo((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.addedNodes !== null) {
+                            for (let i: number = 0; i < mutation.addedNodes.length; i++) {
+                                if (mutation.addedNodes[i].id === "watch7-container" ||
+                                    // old value: movie_player
+                                    mutation.addedNodes[i].id === "watch7-main-container") {
+                                    this.renderButton();
+
+                                    break;
+                                }
+                            }
+                        }
+                    });
+                });
+
+                // old value: pageContainer
+                observer.observe(content, {childList: true, subtree: true});
+            } else {
+                // mutationObserver fallback for old browsers
+                pageContainer.addEventListener("DOMNodeInserted", this.onNodeInserted, false);
+            }
         }
     }
 
-    private static updateVideosList(newVideosList: string[], callback?: () => void): void {
-        YouTubeExtension.disableListener();
-        chrome.storage.local.set({ videosList: newVideosList }, () => {
-            YouTubeExtension.enableListener();
+    private renderButton(): void {
+        if (document.getElementById(this.youlikeButtonContainerId) === null && window.location.href.indexOf("/watch") > -1) {
+            this.loadVideosList((videosList: string[]) => {
+                this.currentVideoId = qs.parse(document.location.search).v;
 
-            if (callback) {
-                callback();
-            }
-        });
+                let videoIsInList: boolean = this.currentVideoIsInList(videosList);
+                let buttonText: string = videoIsInList ? this.removeVideoBtnText : this.addVideoBtnText;
+                let buttonClass: string = "yt-uix-button yt-uix-button-default youlikeButtonContainer_classic";
+                buttonClass += !videoIsInList ? " " + this.youlikeBtnAccentClassName : "";
+
+                this.youLikeBtn = $(`
+                <div id="${this.youlikeButtonContainerId}" class="${buttonClass}">
+                    <span class="yt-uix-button-content">
+                        ${buttonText}
+                    <span>
+                </div>`);
+
+                this.youLikeBtn.click(this.onClicked);
+
+                $("#watch7-user-header").append(this.youLikeBtn);
+            });
+        }
     }
 
-    private static enableListener(): void {
-        chrome.storage.onChanged.addListener(YouTubeExtension.onChanged);
-    }
-
-    private static disableListener(): void {
-        chrome.storage.onChanged.removeListener(YouTubeExtension.onChanged);
-    }
-
-    private static findCurrentVideoIndex(source: string[]): number {
-        return _.findIndex(source,
-            (video: string) => (validator.isURL(video) ? qs.parse(qs.extract(video)).v : video) === YouTubeExtension.currentVideoId);
-    }
-
-    private static currentVideoIsInList(source: string[]): boolean {
-        return YouTubeExtension.findCurrentVideoIndex(source) !== -1;
-    }
-
-    private static loadVideosList(callback: (videosList: string[]) => void): void {
-        chrome.storage.local.get("videosList", (items) => callback(items.videosList));
+    private onNodeInserted(e: Event): void {
+        if (e && e.target && ((<HTMLElement>e.target).id === "watch7-container" ||
+            ((<HTMLElement>e.target).id === "watch7-main-container"))) {
+            // old value: movie_player
+            this.renderButton();
+        }
     }
 }
