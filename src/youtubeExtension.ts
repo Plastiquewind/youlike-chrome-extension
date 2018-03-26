@@ -13,6 +13,13 @@ $(() => {
     }
 });
 
+export type LocalStorageVideoObj = {
+    [videoId: string]: {
+        comment: any[]
+        lastBotCheck: string
+    }
+}
+
 abstract class YouTubeExtensionBase {
     protected readonly addVideoBtnText: string = "Добавить в YouLike";
     protected readonly removeVideoBtnText: string = "Удалить из YouLike";
@@ -27,7 +34,7 @@ abstract class YouTubeExtensionBase {
     }
 
     protected onClicked: () => void = () => {
-        this.loadVideosList((videosList: string[]) => {
+        this.loadVideosList((videosList: string []) => {
             let videoIndex: number = this.findCurrentVideoIndex(videosList);
             let videoIsInList: boolean = videoIndex !== -1;
 
@@ -85,9 +92,9 @@ abstract class YouTubeExtensionBase {
     protected findCurrentVideoIndex(source: string[]): number {
         return _.findIndex(source,
             (video: string) => (validator.isURL(video) ? qs.parse(qs.extract(video)).v : video) === this.currentVideoId);
-    }
+    };
 
-    protected currentVideoIsInList(source: string[]): boolean {
+    protected currentVideoIsInList(source: string []): boolean {
         return this.findCurrentVideoIndex(source) !== -1;
     }
 
