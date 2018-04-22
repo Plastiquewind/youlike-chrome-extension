@@ -120,7 +120,11 @@ class YouTubeModernExtension extends YouTubeExtensionBase {
                 return;
             }
 
-            if (document.getElementById("count") && document.getElementById(self.youlikeButtonContainerId) === null) {
+            let descriptionBox: NodeListOf<Element> = document.querySelectorAll(".ytd-video-secondary-info-renderer");
+
+            if (document.getElementById("count") &&
+                descriptionBox && descriptionBox.length > 0 &&
+                document.getElementById(self.youlikeButtonContainerId) === null) {
                 self.loadVideosList((videosList: string[]) => {
                     self.currentVideoId = qs.parse(document.location.search).v;
 
@@ -138,18 +142,11 @@ class YouTubeModernExtension extends YouTubeExtensionBase {
 
                     youLikeBtnContainer.append(self.youLikeBtn);
 
-                    let targetElement: NodeListOf<Element> = document.querySelectorAll("[id='subscribe-button']");
+                    let targetElement: JQuery<HTMLElement> = $("#subscribe-button.ytd-video-secondary-info-renderer");
 
-                    for(let i: number = 0; i < targetElement.length; i++) {
-                        if(targetElement[i].className.indexOf("ytd-video-secondary-info-renderer") > -1) {
-                            $(targetElement[i]).prepend(youLikeBtnContainer);
-                            break;
-                        }
-                    }
+                    $(targetElement).prepend(youLikeBtnContainer);
 
                     /* Fix hidden description bug */
-                    let descriptionBox: NodeListOf<Element> = document.querySelectorAll("ytd-video-secondary-info-renderer");
-
                     if (descriptionBox[0].className.indexOf("loading") > -1) {
                         descriptionBox[0].classList.remove("loading");
                     }
